@@ -5,7 +5,7 @@ Install this on a Firefox with Greasemonkey or on a Chrome to dim bot posts. May
 ![screenshot](screen.png)
 
 You need to go to the new "HL Tools Settings" item within the Settings menu to add a bot list file, like a public text file from Dropbox:
-![settings](screen.png)
+![settings](settings.png)
 
 It also supporst Steam Forums topics (reads the content of the opening post) along with text files, so if you don't have your own list, you can paste this:
 
