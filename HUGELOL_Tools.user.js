@@ -8,9 +8,13 @@
 // @grant       GM_xmlhttpRequest
 // ==/UserScript==
 
+var bots  = (localStorage['bots'] || '').split(',');
+var lists = (localStorage['bot-lists'] || '').split(',');
+
+
 function log(x) { console.log(x); return x; }
 
-function get(url)
+function get(url, type = "text/html")
 {
     return new Promise(function(resolve, reject)
     {
@@ -22,9 +26,14 @@ function get(url)
                     {
                         if (res.status >= 200 && res.status < 400)
                         {
-                          var parser=new DOMParser();
-                          var doc=parser.parseFromString(res.responseText,"text/html");
-                          resolve(doc);
+                            var parser=new DOMParser();
+                            if (type == "text/plain")
+                                resolve(res.responseText)
+                            else
+                            {
+                                var doc=parser.parseFromString(res.responseText,"text/html");
+                                resolve(doc);
+                            }
                         }
                         else
                           reject(Error(res.status));
@@ -37,39 +46,12 @@ function get(url)
                       + "\nstatus: " + res.status
                       + "\nstatusText: " + res.statusText
                       + "\nfinalUrl: " + res.finalUrl;
-                  log(msg);
+                  alert(msg);
                     reject(Error(msg));
                 }
             });
     });
 }
-
-BOT_LIST_URL = "http://steamcommunity.com/groups/savetheHL1234/discussions/0/541906348044637227/"
-
-var bots = (localStorage['bots'] || '').split(',');
-
-get(BOT_LIST_URL)
-    .then(function(doc)
-        {
-
-// document.body.innerHTML = doc.body.innerHTML;
-var br_to_sep = function(x){ x.parentElement.replaceChild(doc.createTextNode(';'), x) }
-var op_content = doc.querySelector('.forum_op .content');
-Array.prototype.slice.apply(op_content.querySelectorAll('br')).forEach(br_to_sep);
-bots = op_content.textContent
-                 .toLowerCase()
-                 .replace(/.*lack of comment karma\.s*/, '')
-                 .trim()
-                 .replace(/^\s*;*\s*(.*[^;])\s*;*\s*/, '$1')
-                 .split(';')
-                 .filter(function(x){ return x; })
-                 ;
-localStorage['bots'] = bots;
-console.log(bots);
-
-  
-        })
-    .catch(log);
 
 function checkBots ()
 {
@@ -81,22 +63,146 @@ function checkBots ()
             {
                 var item = usernames[i];
                 do { item = item.parentElement; } while (item && !item.classList.contains('item'));
-                // console.log(item);
+                // log(item);
                 item.style.opacity = '0.2';
             }
-            // console.log(user, bots.indexOf(user) < 0);
+            // log(user, bots.indexOf(user) < 0);
         }
 }
 
+function appendToList(coll)
+{
+    for (var i = 0; i < coll.length; i++)
+    {
+        var x = coll[i].toLowerCase();
+        if (bots.indexOf(x) < 0)
+            bots.push(x);
+
+    }
+    localStorage['bots'] = bots;
+}
+
+function steamGet(url)
+{
+    log('loading: ' + url);
+    get(url)
+        .then(function(doc)
+            {
+                // document.body.innerHTML = doc.body.innerHTML;
+                var br_to_sep = function(x){ x.parentElement.replaceChild(doc.createTextNode(';'), x) }
+                var op_content = doc.querySelector('.forum_op .content');
+                Array.prototype.slice.apply(op_content.querySelectorAll('br')).forEach(br_to_sep);
+                var bots = op_content.textContent
+                                 .trim()
+                                 .toLowerCase()
+                                 .replace(/[\n\r]+/, ';')
+                                 .split(';')
+                                 .filter(function(x){ return x; })
+                                 ;
+                appendToList(bots);
+                log(bots);
+            })
+        .catch(log);
+}
+
+function textGet(url)
+{
+    log('loading: ' + url);
+    get(url, 'text/plain')
+        .then(function(doc)
+            {
+                var bots = doc.split('\n');
+                appendToList(bots);
+                log(bots);
+            })
+        .catch(log);
+}
+
+
+// Access Bot Lists
+function accessBotLists(lists)
+{
+    // log(lists);
+    for (var i = 0; i < lists.length; i++)
+    {
+        if (lists[i].indexOf('steamcommunity.com') > 0)
+            steamGet(lists[i]);
+        else
+            textGet(lists[i]);
+    }
+}
+accessBotLists(lists);
+
+
+// Cancel any and all block request
+Array.prototype.slice.apply(document.querySelectorAll('.status.orange a[href*="&ignore=0"]'))
+    .forEach(function(x)
+        {
+            var iframe = document.createElement('iframe');
+            iframe.src = x.href;
+            iframe.style.height = '1px';
+            iframe.style.opacity = '0.0';
+            document.body.appendChild(iframe);
+            get(x.href);
+            var p = x.parentNode.parentNode;
+            p.parentNode.removeChild(p);
+        });
+
+
+// Settings Box
+var settings = document.querySelector('.box.settings');
+if (settings)
+{
+    var menuitem = document.createElement('a');
+    menuitem.setAttribute('class', 'option');
+    menuitem.innerHTML = '<span class="preferences" style="background: transparent url(\'http://hugelol.com/css/sprite_v4.png\') no-repeat scroll -466px -129px;"></span> HL Tools Settings';
+    settings.appendChild(menuitem);
+    menuitem.addEventListener('click', function()
+    {
+        document.querySelector('.settings.box > .active').classList.remove('active')
+        menuitem.classList.add('active');
+
+        document.querySelector('h2').textContent = "HL Tools Settings";
+        document.querySelector('.body').innerHTML = 
+            '<label><div class="field">' +
+            '<div class="description">Sources</div><textarea id="gmhl-blocklist" name="gmhl-blocklist" class="blue" onfocus="$(\'#gmhl-blocklist-info\').css(\'visibility\', \'visible\');" onblur="$(\'#gmhl-blocklist-info\').css(\'visibility\', \'hidden\');" maxlength="180"></textarea>' +
+            '<br style="clear: both;">' +
+            '<p class="info hide" id="gmhl-blocklist-info">Please enter your blocklist URLs here! Currently Steam Forums topics and remote text files are supported. I suggest using a public plain text file on your Dropbox account.</p>' + 
+            '</div></label>';
+
+        var gmhl_blocklist = document.getElementById('gmhl-blocklist');
+        gmhl_blocklist.value = lists.join('\n');
+
+        document.getElementById('submit-container').innerHTML = 
+        '<a href="javascript:void(0);" id="gmhl-pref-reset">Restore default preferences</a>' +
+        '<a href="javascript:void(0);" id="gmhl-save" class="btn input flr">Save Preferences</a>' +
+        '<br style="clear: both;">';
+        
+        document.getElementById('gmhl-pref-reset').addEventListener('click', function()
+        {
+            bots  = [];
+            lists = [];
+            localStorage['bots']      = '';
+            localStorage['bot-lists'] = '';
+            gmhl_blocklist.value = '';
+        });
+
+        document.getElementById('gmhl-save').addEventListener('click', function()
+        {
+            lists = gmhl_blocklist.value.split('\n');
+            localStorage['bot-lists'] = lists;
+        });
+    });
+}
+
+
+// check for bots and run auto-scan
+checkBots();
 var target  = document.getElementById('stream');
 var inspect = document.getElementById('stream-append');
- 
-// create an observer instance
 var observer = new MutationObserver(function(mutations) {
   for (var i = 0; i < mutations.length; i++)
     if (mutations[i].target == inspect)
       checkBots();
 });
- 
 observer.observe(target, { childList: true, subtree: true });
-checkBots();
