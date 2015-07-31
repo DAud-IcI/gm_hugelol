@@ -6,11 +6,16 @@
 // @include     http://*hugelol.com/*
 // @version     1
 // @grant       GM_xmlhttpRequest
+// @grant       GM_addStyle
 // ==/UserScript==
+
+
+GM_addStyle(".gmhl-collapsed-item { min-height: 0px !important; padding: 0px !important; }");
 
 var bots  = (localStorage['bots'] || '').split(',');
 var lists = (localStorage['bot-lists'] || '').split(',');
 
+console.log(unsafeWindow.jQuery);
 
 function log(x) { console.log(x); return x; }
 
@@ -53,8 +58,30 @@ function get(url, type = "text/html")
     });
 }
 
+function dim(item) { item.style.opacity = '0.2'; }
+
+function collapseDownvoted(user)
+{
+    var right = user; do { right = right.parentElement; } while(right && !right.classList.contains('right'));
+
+    if (right && right.querySelector('.vote-button.hate.active') != null)
+    {
+        var usernode = user.parentElement; usernode.innerHTML = '<span style="">' + user.innerHTML + '</span>';
+        var title = right.querySelector('.title'); var p = title.parentElement; p.innerHTML = title.innerHTML; title = p;
+        title.style.fontSize = '18px'; title.style.color = '#222'; title.style.lineHeight = '1.1';
+        var div = right.parentElement; //document.createElement("div");
+        div.innerHTML = title.outerHTML + '<span style="float:right">' + usernode.outerHTML + '</span>';
+        div.classList.add('gmhl-collapsed-item'); //div.setAttribute('class', 'item jump gmhl-collapsed-item');
+        dim(div);
+        //right.parentElement.parentElement.replaceChild(div, right.parentElement);
+    }
+}
+
 function checkBots ()
 {
+    var do_collapse = !!localStorage['gmhl-collapsedownvoted'];
+    var do_hatebots = !!localStorage['gmhl-hatebots'];
+
     var usernames = document.querySelectorAll('.username');
     for (var i = 0; i < usernames.length; i++)
         {
@@ -63,10 +90,10 @@ function checkBots ()
             {
                 var item = usernames[i];
                 do { item = item.parentElement; } while (item && !item.classList.contains('item'));
-                // log(item);
-                item.style.opacity = '0.2';
+                dim(item);
             }
-            // log(user, bots.indexOf(user) < 0);
+            if (do_collapse)
+            try { collapseDownvoted(usernames[i]); } catch(e) { console.log(e); }
         }
 }
 
@@ -150,9 +177,33 @@ Array.prototype.slice.apply(document.querySelectorAll('.status.orange a[href*="&
 
 
 // Settings Box
+function createOptions(id, name, description, options)
+{
+    var ret = 
+    '<div class="field" id="' + id + '" style="cursor: auto;">' +
+        '<div class="description">' + name + '</div>' +
+        '<div class="right-description">' + description +
+            '<div>';
+    for (var i = 0; i < options.length; i++)
+        ret +=
+        '<div>' + 
+            '<input id="' + id + i + '" type="radio" value="' + i + '" name="' + id + '"></input>' +
+            '<label class="label" for="' + id + i + '">' + options[i] + '</label>' +
+        '</div>';
+    ret +=
+            '</div>' +
+        '</div>' +
+    '</div><br style="clear: both;"></br><br style="clear: both;"></br>'
+    ;
+    return ret;
+}
+
 var settings = document.querySelector('.box.settings');
 if (settings)
 {
+    var do_collapse = !!localStorage['gmhl-collapsedownvoted'];
+    var do_hatebots = !!localStorage['gmhl-hatebots'];
+
     var menuitem = document.createElement('a');
     menuitem.setAttribute('class', 'option');
     menuitem.innerHTML = '<span class="preferences" style="background: transparent url(\'http://hugelol.com/css/sprite_v4.png\') no-repeat scroll -466px -129px;"></span> HL Tools Settings';
@@ -168,10 +219,23 @@ if (settings)
             '<div class="description">Sources</div><textarea id="gmhl-blocklist" name="gmhl-blocklist" class="blue" onfocus="$(\'#gmhl-blocklist-info\').css(\'visibility\', \'visible\');" onblur="$(\'#gmhl-blocklist-info\').css(\'visibility\', \'hidden\');" maxlength="180"></textarea>' +
             '<br style="clear: both;">' +
             '<p class="info hide" id="gmhl-blocklist-info">Please enter your blocklist URLs here! Currently Steam Forums topics and remote text files are supported. I suggest using a public plain text file on your Dropbox account.</p>' + 
-            '</div></label>';
+            '</div></label>' +
+
+            createOptions('gmhl-collapse-downvoted', 'Collapse downvoted',
+                          'Collapse bot posts you already downvoted to just the title and the username, to make things a bit more tidy',
+                          ['Keep visible', 'Collapse']) +
+
+            createOptions('gmhl-hate-bots', 'Auto downvote',
+                          'Automatically downvote ("<i>hate</i>") all of the bot posts as they appear',
+                          ['Let me do it', 'Downvote all!']) +
+            '';
+
 
         var gmhl_blocklist = document.getElementById('gmhl-blocklist');
         gmhl_blocklist.value = lists.join('\n');
+
+        document.getElementById('gmhl-collapse-downvoted' + (do_collapse ? '1' : '0')).checked = true;
+        document.getElementById('gmhl-hate-bots' + (do_hatebots ? '1' : '0')).checked = true;
 
         document.getElementById('submit-container').innerHTML = 
         '<a href="javascript:void(0);" id="gmhl-pref-reset">Restore default preferences</a>' +
@@ -185,12 +249,17 @@ if (settings)
             localStorage['bots']      = '';
             localStorage['bot-lists'] = '';
             gmhl_blocklist.value = '';
+            localStorage['gmhl-collapsedownvoted'] = '';
+            localStorage['gmhl-hatebots'] = '';
         });
 
         document.getElementById('gmhl-save').addEventListener('click', function()
         {
             lists = gmhl_blocklist.value.split('\n');
             localStorage['bot-lists'] = lists;
+            localStorage['gmhl-collapsedownvoted'] = document.getElementById('gmhl-collapse-downvoted1').checked ? '1' : '';
+            localStorage['gmhl-hatebots']          = document.getElementById('gmhl-hate-bots1'         ).checked ? '1' : '';
+
         });
     });
 }
