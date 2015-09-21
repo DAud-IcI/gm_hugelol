@@ -4,7 +4,8 @@
 // @description HUGELOL extra functionality
 // @include     https://*hugelol.com/*
 // @include     http://*hugelol.com/*
-// @version     1
+// @version     1.1
+// @updateURL   https://github.com/DAud-IcI/gm_hugelol/raw/master/HUGELOL_Tools.user.js
 // @grant       GM_xmlhttpRequest
 // @grant       GM_addStyle
 // ==/UserScript==
