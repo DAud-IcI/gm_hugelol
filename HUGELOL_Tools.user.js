@@ -12,6 +12,9 @@
 
 GM_addStyle(".gmhl-collapsed-item { min-height: 0px !important; padding: 0px !important; }");
 
+if ( !('bot-lists' in localStorage) )
+    localStorage['bot-lists'] = "https://dl.dropboxusercontent.com/u/4398956/botlist.txt";
+
 var bots  = (localStorage['bots'] || '').split(',');
 var lists = (localStorage['bot-lists'] || '').split(',');
 
@@ -60,10 +63,39 @@ function get(url, type = "text/html")
 
 function dim(item) { item.style.opacity = '0.2'; }
 
-function collapseDownvoted(user)
+function getRight(user)
 {
     var right = user; do { right = right.parentElement; } while(right && !right.classList.contains('right'));
+    return right || null;
+}
 
+function downvote(user)
+{
+    var right = getRight(user);
+    if (!right) return;
+    var button = right.querySelector('.vote-button.hate');
+    //console.log("button:", button);
+    if (!button.classList.contains('active'))
+    {
+        if(document.createEvent)
+        {
+            var click = document.createEvent("MouseEvents");
+            click.initMouseEvent("click", true, true, window,
+            0, 0, 0, 0, 0, false, false, false, false, 0, null);
+            button.dispatchEvent(click);
+            button.focus();
+        }else if(document.documentElement.fireEvent)
+        {
+            button = document.getElementById("test");
+            button.fireEvent("onclick");
+            button.focus();
+        }
+    }
+}
+
+function collapseDownvoted(user)
+{
+    var right = getRight(user);
     if (right && right.querySelector('.vote-button.hate.active') != null)
     {
         var usernode = user.parentElement; usernode.innerHTML = '<span style="">' + user.innerHTML + '</span>';
@@ -86,12 +118,15 @@ function checkBots ()
     for (var i = 0; i < usernames.length; i++)
         {
             var user = usernames[i].textContent.trim().toLowerCase();
-            if (bots.indexOf(user) >= 0)
-            {
-                var item = usernames[i];
-                do { item = item.parentElement; } while (item && !item.classList.contains('item'));
-                dim(item);
-            }
+            if (bots.indexOf(user) < 0) continue;
+
+            var item = usernames[i];
+            do { item = item.parentElement; } while (item && !item.classList.contains('item'));
+            dim(item);
+
+            if (do_hatebots)
+            try { downvote(usernames[i]); } catch(e) { console.log(e); }
+            if (i >= usernames.length - 1) return;
             if (do_collapse)
             try { collapseDownvoted(usernames[i]); } catch(e) { console.log(e); }
         }
@@ -247,7 +282,8 @@ if (settings)
             bots  = [];
             lists = [];
             localStorage['bots']      = '';
-            localStorage['bot-lists'] = '';
+            localStorage['bot-lists'] = "https://dl.dropboxusercontent.com/u/4398956/botlist.txt";
+
             gmhl_blocklist.value = '';
             localStorage['gmhl-collapsedownvoted'] = '';
             localStorage['gmhl-hatebots'] = '';
