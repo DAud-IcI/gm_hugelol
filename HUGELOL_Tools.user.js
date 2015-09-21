@@ -19,7 +19,21 @@ if ( !('bot-lists' in localStorage) )
 var bots  = (localStorage['bots'] || '').split(',');
 var lists = (localStorage['bot-lists'] || '').split(',');
 
-console.log(unsafeWindow.jQuery);
+function reset()
+{
+    bots  = [];
+    lists = [];
+    localStorage['bots']      = '';
+    localStorage['bot-lists'] = "https://dl.dropboxusercontent.com/u/4398956/botlist.txt";
+
+    gmhl_blocklist.value = '';
+    localStorage['gmhl-collapsedownvoted'] = '1';
+    localStorage['gmhl-hatebots'] = '';
+}
+
+if (!('gmhl-collapsedownvoted' in localStorage)) reset();
+
+//console.log(unsafeWindow.jQuery);
 
 function log(x) { console.log(x); return x; }
 
@@ -278,17 +292,7 @@ if (settings)
         '<a href="javascript:void(0);" id="gmhl-save" class="btn input flr">Save Preferences</a>' +
         '<br style="clear: both;">';
         
-        document.getElementById('gmhl-pref-reset').addEventListener('click', function()
-        {
-            bots  = [];
-            lists = [];
-            localStorage['bots']      = '';
-            localStorage['bot-lists'] = "https://dl.dropboxusercontent.com/u/4398956/botlist.txt";
-
-            gmhl_blocklist.value = '';
-            localStorage['gmhl-collapsedownvoted'] = '';
-            localStorage['gmhl-hatebots'] = '';
-        });
+        document.getElementById('gmhl-pref-reset').addEventListener('click', reset);
 
         document.getElementById('gmhl-save').addEventListener('click', function()
         {
