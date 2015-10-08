@@ -26,7 +26,6 @@ function reset()
     localStorage['bots']      = '';
     localStorage['bot-lists'] = "https://dl.dropboxusercontent.com/u/4398956/botlist.txt";
 
-    gmhl_blocklist.value = '';
     localStorage['gmhl-collapsedownvoted'] = '1';
     localStorage['gmhl-hatebots'] = '';
 }
@@ -292,7 +291,7 @@ if (settings)
         '<a href="javascript:void(0);" id="gmhl-save" class="btn input flr">Save Preferences</a>' +
         '<br style="clear: both;">';
         
-        document.getElementById('gmhl-pref-reset').addEventListener('click', reset);
+        document.getElementById('gmhl-pref-reset').addEventListener('click', function() { reset(); try { gmhl_blocklist.value = ''; } catch(e) {} });
 
         document.getElementById('gmhl-save').addEventListener('click', function()
         {
