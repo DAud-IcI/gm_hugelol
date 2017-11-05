@@ -1,3 +1,8 @@
+<details>
+ <summary>:no_entry: [DEPRECATED]</summary>
+ <div>
+
+
 # gm_hugelol
 
 * dim posts from bots
@@ -30,3 +35,5 @@ It also supporst Steam Forums topics (reads the content of the opening post) and
 ## Support
 
 [Discussion and bug reports on the Steam Forums topic here](http://steamcommunity.com/groups/savetheHL1234/discussions/0/541906989396856183/)
+<div>
+</details>
